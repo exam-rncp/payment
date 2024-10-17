@@ -3,7 +3,7 @@ name: ci
 on:
   push:
     branches:
-    - "main"  # run for branches
+      - main 
     tags:
     - "*"  # run for tags
   pull_request:
@@ -15,12 +15,14 @@ on:
 
 jobs:
   test:
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: go/src/github.com/exam-rncp/payment
     runs-on: ubuntu-latest
     env:
-      GROUP: weaveworksdemos 
+      GROUP: f3lin 
       COMMIT: ${{ github.sha }}
       REPO: payment
       GO_VERSION: 1.7
@@ -33,7 +35,7 @@ jobs:
 
     - uses: actions/setup-go@v5
       with:
-        go-version: ${{ env.GO_VERSION }} # The Go version to download (if necessary) and use.
+        go-version: ${{ env.GO_VERSION }} 
 
     - name: Install prereqs
       run: |
@@ -41,22 +43,36 @@ jobs:
         gvt restore
 
     - name: Build
-      env:
-        DOCKER_BUILDKIT: 1
       run: |
         chmod +x scripts/build.sh
         ./scripts/build.sh
 
     - name: Unit test
-      env:
-        DOCKER_BUILDKIT: 1
       run: |
         chmod +x test/test.sh
         ./test/test.sh unit.py
 
     - name: Container test
-      env:
-        DOCKER_BUILDKIT: 1
       run: |
-        chmod +x test/test.sh
-        ./test/test.sh container.py --tag ${{ env.COMMIT }}
+        ./test/test.sh container.py
+  
+    - name: Automatic Tagging of Releases
+      id: increment-git-tag
+      run: |
+        chmod +x scripts/git_update_tag.sh
+        bash scripts/git_update_tag.sh -v patch
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ env.GROUP }}
+        password: ${{ secrets.DOCKER_PASS }}
+
+    - name: Push user to Docker Hub
+      env:
+        TAG: ${{ steps.increment-git-tag.outputs.git-tag }}
+      run: |
+        make release
+        docker push $GROUP/$REPO:$TAG

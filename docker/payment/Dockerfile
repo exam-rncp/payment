@@ -1,11 +1,11 @@
 FROM golang:1.7
 
-COPY . /go/src/github.com/microservices-demo/payment/
+COPY . /go/src/github.com/exam-rncp/payment/
 
 RUN go get -u github.com/FiloSottile/gvt
-RUN cd /go/src/github.com/microservices-demo/payment/ && gvt restore
+RUN cd /go/src/github.com/exam-rncp/payment/ && gvt restore
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app github.com/microservices-demo/payment/cmd/paymentsvc
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app github.com/exam-rncp/payment/cmd/paymentsvc
 
 FROM alpine:3.4
 

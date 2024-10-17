@@ -6,19 +6,25 @@ class GoServices(unittest.TestCase):
     def test_go(self):
         script_dir = os.path.dirname(os.path.realpath(__file__))
         code_dir = script_dir + "/.."
-        goPath = os.environ['GOPATH']
-        command = ['docker', 'run',
+        go_path = os.environ['GOPATH']
+        
+        command = [
+            'docker', 'run',
             '--rm',
-            '-v', goPath + ':/go/',
-            '-v', code_dir + ':/go/src/github.com/microservices-demo/payment',
-            '-w', '/go/src/github.com/microservices-demo/payment',
+            '-v', f"{go_path}:/go/",
+            '-v', f"{code_dir}:/go/src/github.com/exam-rncp/payment",
+            '-w', '/go/src/github.com/exam-rncp/payment',
             '-e', 'GOPATH=/go/',
             'golang:1.7',
-            'go', 'test', '-v', '-covermode=count', '-coverprofile=coverage.out'
+            '/bin/sh', '-c', 'go test -v'
         ]
 
-        print(Docker().execute(command, dump_streams=True))
-
+        docker = Docker()
+        try:
+            output = docker.execute(command, dump_streams=True)
+        except RuntimeError as e:
+            print(f"Error running tests: {str(e)}")
+            raise
 
 if __name__ == '__main__':
     unittest.main()

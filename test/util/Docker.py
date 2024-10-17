@@ -2,8 +2,11 @@ import re
 from subprocess import Popen, PIPE
 from random import random
 import time
+import logging
 
-# From http://blog.bordage.pro/avoid-docker-py/
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class Docker:
     def kill_and_remove(self, ctr_name):
         command = ['docker', 'rm', '-f', ctr_name]
@@ -11,7 +14,7 @@ class Docker:
             self.execute(command)
             return True
         except RuntimeError as e:
-            print(e)
+            logger.error(f"Error removing container: {e}")
             return False
 
     def random_container_name(self, prefix):
@@ -21,31 +24,66 @@ class Docker:
         return retstr
 
     def get_container_ip(self, ctr_name):
-        self.waitForContainerToStart(ctr_name)
+        self.wait_for_container(ctr_name)
         command = ['docker', 'inspect',
-                   '--format', '\'{{.NetworkSettings.IPAddress}}\'',
+                   '--format', '{{.NetworkSettings.IPAddress}}',
                    ctr_name]
-        return re.sub(r'[^0-9.]*', '', self.execute(command))
+        ip = re.sub(r'[^0-9.]*', '', self.execute(command))
+        if not ip:
+            raise RuntimeError(f"Could not get IP for container {ctr_name}")
+        return ip
 
     def execute(self, command, dump_streams=False):
-        print("Running: " + ' '.join(command))
+        logger.info("Running: " + ' '.join(command))
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
-        if dump_streams == True:
-            print(out.decode('utf-8'))
-            print(err.decode('utf-8'))
-        return str(out.decode('utf-8'))
+        
+        if p.returncode != 0:
+            error_msg = err.decode('utf-8')
+            logger.error(f"Command failed: {error_msg}")
+            raise RuntimeError(error_msg)
+            
+        if dump_streams:
+            logger.info(out.decode('utf-8'))
+            logger.info(err.decode('utf-8'))
+            
+        return out.decode('utf-8')
 
     def start_container(self, container_name="", image="", cmd="", host=""):
-        command = ['docker', 'run', '-d', '-h', host, '--name', container_name, image]
+        if not container_name or not image:
+            raise ValueError("Container name and image are required")
+            
+        command = ['docker', 'run', '-d']
+        if host:
+            command.extend(['-h', host])
+        command.extend(['--name', container_name, image])
+        if cmd:
+            command.extend(cmd.split())
+            
         self.execute(command)
 
-    def waitForContainerToStart(self, ctr_name):
+    def wait_for_container(self, ctr_name, max_retries=30):
         command = ['docker', 'inspect',
-                   '--format', '\'{{.State.Status}}\'',
+                   '--format', '{{.State.Status}}',
                    ctr_name]
-        status = re.sub(r'[^a-z]*', '', self.execute(command))
-        while status != "running":
-            time.sleep(1)
-            print("Status: " + status + ". Waiting for container to start.")
-            status = re.sub(r'[^a-z]*', '', self.execute(command))
+                   
+        for i in range(max_retries):
+            try:
+                status = re.sub(r'[^a-z]*', '', self.execute(command))
+                logger.info(f"Container {ctr_name} status: {status}")
+                
+                if status == "running":
+                    return True
+                    
+                if status == "exited":
+                    logs_command = ['docker', 'logs', ctr_name]
+                    logger.error(f"Container exited. Logs: {self.execute(logs_command)}")
+                    return False
+                    
+                time.sleep(1)
+                
+            except Exception as e:
+                logger.warning(f"Error checking container status: {e}")
+                time.sleep(1)
+                
+        raise RuntimeError(f"Container {ctr_name} failed to start after {max_retries} attempts")

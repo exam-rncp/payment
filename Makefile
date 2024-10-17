@@ -1,4 +1,4 @@
-NAME = weaveworksdemos/payment
+OPENAPI= weaveworksdemos/openapi
 INSTANCE = payment
 
 .PHONY: default copy test
@@ -6,14 +6,16 @@ INSTANCE = payment
 default: test
 
 copy:
-	docker create --name $(INSTANCE) $(NAME)-dev
+	docker create --name $(INSTANCE) $(INSTANCE)-dev
 	docker cp $(INSTANCE):/app $(shell pwd)/app
 	docker rm $(INSTANCE)
 
 release:
-	docker build -t $(NAME) -f ./docker/payment/Dockerfile-release .
+	docker build -t $(GROUP)/$(INSTANCE):$(TAG) -f ./docker/payment/Dockerfile-release .
 
 test:
-	GROUP=weaveworksdemos COMMIT=$(COMMIT) ./scripts/build.sh
+	docker pull $(OPENAPI)
+	chmod +x scripts/build.sh
+	./scripts/build.sh
 	./test/test.sh unit.py
-	./test/test.sh container.py --tag $(COMMIT)
+	./test/test.sh container.py
