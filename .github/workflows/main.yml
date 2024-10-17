@@ -43,7 +43,9 @@ jobs:
     - name: Build
       env:
         DOCKER_BUILDKIT: 1
-      run: ./scripts/build.sh
+      run: |
+        chmod +x scripts/build.sh
+        ./scripts/build.sh
 
     - name: Unit test
       env:

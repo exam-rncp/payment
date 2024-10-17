@@ -120,7 +120,7 @@ coverage/
 
 # Tern
 .tern-port
-docker/payment
+# docker/payment
 vendor/**
 !vendor/manifest
 coverage.out
