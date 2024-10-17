@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches:
+    - "main"  # run for branches
+    tags:
+    - "*"  # run for tags
+  pull_request:
+    branches:
+    - "*"  # run for branches
+    tags:
+    - "*"  # run for tags
+
+
+jobs:
+  test:
+    defaults:
+      run:
+        working-directory: go/src/github.com/exam-rncp/payment
+    runs-on: ubuntu-latest
+    env:
+      GROUP: weaveworksdemos 
+      COMMIT: ${{ github.sha }}
+      REPO: payment
+      GO_VERSION: 1.7
+      GOPATH: /home/runner/work/payment/payment/go/
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        path: go/src/github.com/exam-rncp/payment
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }} # The Go version to download (if necessary) and use.
+
+    - name: Install prereqs
+      run: |
+        go get -u github.com/FiloSottile/gvt
+        gvt restore
+
+    - name: Build
+      env:
+        DOCKER_BUILDKIT: 1
+      run: ./scripts/build.sh
+
+    - name: Unit test
+      env:
+        DOCKER_BUILDKIT: 1
+      run: |
+        chmod +x test/test.sh
+        ./test/test.sh unit.py
+
+    - name: Container test
+      env:
+        DOCKER_BUILDKIT: 1
+      run: |
+        chmod +x test/test.sh
+        ./test/test.sh container.py --tag ${{ env.COMMIT }}
