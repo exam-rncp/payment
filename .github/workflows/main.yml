@@ -46,7 +46,7 @@ jobs:
       run: |
         chmod +x scripts/build.sh
         ./scripts/build.sh
-
+        
     - name: Unit test
       run: |
         chmod +x test/test.sh
@@ -67,9 +67,7 @@ jobs:
     - name: Docker images tag
       env:
         TAG: ${{ steps.increment-git-tag.outputs.git-tag }}
-      run: docker image ls
-
-    # docker image tag $GROUP/$REPO:$COMMIT $GROUP/$REPO:$TAG
+      run:  docker image tag $GROUP/$REPO:$COMMIT $GROUP/$REPO:$TAG
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
@@ -81,5 +79,4 @@ jobs:
       env:
         TAG: ${{ steps.increment-git-tag.outputs.git-tag }}
       run: |
-        make release
         docker push $GROUP/$REPO:$TAG
