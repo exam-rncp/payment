@@ -24,7 +24,7 @@ RUN	addgroup -g ${SERVICE_GID} ${SERVICE_GROUP} && \
 
 USER ${SERVICE_USER}
 
-EXPOSE 80
+EXPOSE 8080
 
-CMD ["/app", "-port=80"]
+CMD ["/app", "-port=8080"]
 

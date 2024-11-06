@@ -9,7 +9,7 @@ from util.Dredd import Dredd
 
 class PaymentContainerTest(unittest.TestCase):
     TAG = "latest"
-    PORT = "80"
+    PORT = "8080"
     
     def setUp(self):
         self.docker = Docker()
